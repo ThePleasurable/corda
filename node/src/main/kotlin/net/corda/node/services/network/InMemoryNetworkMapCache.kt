@@ -4,10 +4,12 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.SettableFuture
 import net.corda.core.bufferUntilSubscribed
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.map
 import net.corda.core.messaging.SingleMessageRecipient
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.DEFAULT_SESSION_ID
 import net.corda.core.node.services.NetworkMapCache.MapChange
 import net.corda.core.node.services.PartyInfo
@@ -70,6 +72,12 @@ open class InMemoryNetworkMapCache : SingletonSerializeAsToken(), NetworkMapCach
     }
 
     override fun getNodeByLegalIdentityKey(identityKey: PublicKey): NodeInfo? = registeredNodes[identityKey]
+    override fun getNodeByLegalIdentity(services: ServiceHub, party: AbstractParty): NodeInfo? {
+        val wellKnownParty = services.identityService.partyFromAnonymous(party)
+        return wellKnownParty?.let {
+            getNodeByLegalIdentityKey(it.owningKey)
+        }
+    }
 
     override fun track(): Pair<List<NodeInfo>, Observable<MapChange>> {
         synchronized(_changed) {

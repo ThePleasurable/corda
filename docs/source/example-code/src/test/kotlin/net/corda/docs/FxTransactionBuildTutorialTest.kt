@@ -1,6 +1,7 @@
 package net.corda.docs
 
 import net.corda.core.contracts.*
+import net.corda.core.flows.TxKeyFlow
 import net.corda.core.getOrThrow
 import net.corda.core.node.services.ServiceInfo
 import net.corda.core.serialization.OpaqueBytes
@@ -33,6 +34,9 @@ class FxTransactionBuildTutorialTest {
                 advertisedServices = *arrayOf(ServiceInfo(NetworkMapService.type), notaryService))
         nodeA = mockNet.createPartyNode(notaryNode.info.address)
         nodeB = mockNet.createPartyNode(notaryNode.info.address)
+        // Let the nodes know about [TxKeyFlow] - in normal use the node startup automatically finds this
+        nodeA.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
+        nodeB.registerInitiatedFlow(TxKeyFlow.Provider::class.java)
         nodeB.registerInitiatedFlow(ForeignExchangeRemoteFlow::class.java)
     }
 

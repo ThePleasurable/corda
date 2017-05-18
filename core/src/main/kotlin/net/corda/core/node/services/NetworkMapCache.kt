@@ -2,8 +2,10 @@ package net.corda.core.node.services
 
 import com.google.common.util.concurrent.ListenableFuture
 import net.corda.core.contracts.Contract
+import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
 import net.corda.core.node.NodeInfo
+import net.corda.core.node.ServiceHub
 import net.corda.core.randomOrNull
 import net.corda.core.serialization.CordaSerializable
 import org.bouncycastle.asn1.x500.X500Name
@@ -61,6 +63,14 @@ interface NetworkMapCache {
      * or the appropriate oracle for a contract.
      */
     fun getRecommended(type: ServiceType, contract: Contract, vararg party: Party): NodeInfo? = getNodesWithService(type).firstOrNull()
+
+    /**
+     * Look up the node info for a specific party. Will attempt to de-anonymise the party if applicable.
+     *
+     * @param services service hub for access to the identity service for deanonymisation
+     * @param party party to retrieve node information for
+     */
+    fun getNodeByLegalIdentity(services: ServiceHub, party: AbstractParty): NodeInfo?
 
     /** Look up the node info for a legal name. */
     fun getNodeByLegalName(principal: X500Name): NodeInfo? = partyNodes.singleOrNull { it.legalIdentity.name == principal }

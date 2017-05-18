@@ -9,6 +9,7 @@ import net.corda.core.crypto.isFulfilledBy
 import net.corda.core.flows.FlowException
 import net.corda.core.flows.FlowLogic
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.AnonymousParty
 import net.corda.core.identity.Party
 import net.corda.core.serialization.CordaSerializable
 import net.corda.core.transactions.SignedTransaction
@@ -57,17 +58,14 @@ abstract class AbstractStateReplacementFlow {
         @Suspendable
         @Throws(StateReplacementException::class)
         override fun call(): StateAndRef<T> {
-            val (stx, participants) = assembleTx()
+            val (stx, participantKeys, myKey) = assembleTx()
 
             progressTracker.currentStep = SIGNING
 
-            val myKey = serviceHub.myInfo.legalIdentity
-            val me = listOf(myKey)
-
-            val signatures = if (participants == me) {
+            val signatures = if (participantKeys.singleOrNull() == myKey) {
                 getNotarySignatures(stx)
             } else {
-                collectSignatures((participants - me).map { it.owningKey }, stx)
+                collectSignatures(participantKeys - myKey, stx)
             }
 
             val finalTx = stx + signatures
@@ -75,7 +73,13 @@ abstract class AbstractStateReplacementFlow {
             return finalTx.tx.outRef(0)
         }
 
-        abstract protected fun assembleTx(): Pair<SignedTransaction, Iterable<AbstractParty>>
+        /**
+         * Build the upgrade transaction.
+         *
+         * @return a triple of the transaction, the public keys of all participants, and the participating public key of
+         * this node.
+         */
+        abstract protected fun assembleTx(): Triple<SignedTransaction, Iterable<PublicKey>, PublicKey>
 
         @Suspendable
         private fun collectSignatures(participants: Iterable<PublicKey>, stx: SignedTransaction): List<DigitalSignature.WithKey> {

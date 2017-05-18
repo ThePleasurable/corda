@@ -7,6 +7,7 @@ import net.corda.core.contracts.InsufficientBalanceException
 import net.corda.core.contracts.TransactionType
 import net.corda.core.contracts.issuedBy
 import net.corda.core.flows.StartableByRPC
+import net.corda.core.flows.TxKeyFlow
 import net.corda.core.identity.Party
 import net.corda.core.serialization.OpaqueBytes
 import net.corda.core.transactions.SignedTransaction
@@ -22,7 +23,7 @@ import java.util.*
  * issuer.
  */
 @StartableByRPC
-class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow(progressTracker) {
+class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, progressTracker: ProgressTracker) : AbstractCashFlow<SignedTransaction>(progressTracker) {
     constructor(amount: Amount<Currency>, issueRef: OpaqueBytes) : this(amount, issueRef, tracker())
 
     companion object {
@@ -62,7 +63,9 @@ class CashExitFlow(val amount: Amount<Currency>, val issueRef: OpaqueBytes, prog
                 .toSet()
         // Sign transaction
         progressTracker.currentStep = SIGNING_TX
-        val tx = serviceHub.signInitialTransaction(builder)
+        // TODO: Can we do filter this more efficiently?
+        val ourKey = participants.single { it.owningKey in serviceHub.keyManagementService.keys }.owningKey
+        val tx = serviceHub.signInitialTransaction(builder, ourKey)
 
         // Commit the transaction
         progressTracker.currentStep = FINALISING_TX
